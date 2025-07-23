@@ -22,6 +22,12 @@ function PublicView({ contract }) {
   const [marksResult, setMarksResult] = useState(null);
   const [marksSearchMessage, setMarksSearchMessage] = useState('');
 
+  // --- State for Yearly Result Search ---
+  const [resultStudentId, setResultStudentId] = useState('');
+  const [resultAcademicYear, setResultAcademicYear] = useState('');
+  const [yearlyResult, setYearlyResult] = useState(null);
+  const [yearlyResultMessage, setYearlyResultMessage] = useState('');
+
   const handleCourseSearch = async (event) => {
     event.preventDefault();
     if (!contract) return;
@@ -101,6 +107,26 @@ function PublicView({ contract }) {
     } catch (error) {
       console.error("Error searching for marks:", error);
       setMarksSearchMessage('Error searching for marks.');
+    }
+  };
+
+  const handleYearlyResultSearch = async (event) => {
+    event.preventDefault();
+    if (!contract) return;
+    setYearlyResult(null);
+    setYearlyResultMessage('');
+    try {
+      const result = await contract.methods.getYearlyResult(resultStudentId, resultAcademicYear).call();
+      
+      // We check the status, 0 is 'PENDING'
+      if (result.status > 0) {
+        setYearlyResult(result);
+      } else {
+        setYearlyResultMessage('Yearly result not found or not calculated yet.');
+      }
+    } catch (error) {
+      console.error("Error searching for yearly result:", error);
+      setYearlyResultMessage('Error searching for result.');
     }
   };
 
@@ -216,6 +242,39 @@ function PublicView({ contract }) {
           <p><strong>Final Exam Mark:</strong> {marksResult.finalMark}</p>
           <p><strong>Total Grade:</strong> {marksResult.totalGrade}</p>
           <p><strong>Passed Course:</strong> {marksResult.isPassed ? 'Yes' : 'No'}</p>
+        </div>
+      )}
+      
+      <hr />
+
+      {/* --- Search Yearly Result Form --- */}
+      <h3>Search for Yearly Result</h3>
+      <form onSubmit={handleYearlyResultSearch}>
+        <input 
+          type="number" 
+          placeholder="Enter Student ID" 
+          value={resultStudentId}
+          onChange={(e) => setResultStudentId(e.target.value)}
+        />
+        <input 
+          type="text" 
+          placeholder="Academic Year (e.g., 2024-2025)" 
+          value={resultAcademicYear}
+          onChange={(e) => setResultAcademicYear(e.target.value)}
+        />
+        <button type="submit">Search Result</button>
+      </form>
+
+      {/* --- Display Yearly Result --- */}
+      {yearlyResultMessage && <p>{yearlyResultMessage}</p>}
+      {yearlyResult && (
+        <div>
+          <h4>Yearly Result Details</h4>
+          <p><strong>Academic Year:</strong> {yearlyResult.academicYear}</p>
+          <p><strong>Final GPA:</strong> {(yearlyResult.finalGPA / 100).toFixed(2)}</p>
+          <p><strong>Status:</strong> {yearlyResult.status === '1' ? 'Passed' : 'Failed'}</p>
+          <p><strong>Credits Earned:</strong> {yearlyResult.totalCreditsEarned}</p>
+          <p><strong>Credits Unearned:</strong> {yearlyResult.totalCreditsUnEarned}</p>
         </div>
       )}
     </div>
