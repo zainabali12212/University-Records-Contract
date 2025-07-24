@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
 contract UniversityRecords {
 
@@ -7,60 +7,60 @@ contract UniversityRecords {
 
     enum CourseType { ACADEMIC, PROJECT, RESEARCH }
     enum YearlyStatus { PENDING, PASSED, FAILED }
+    enum CoursePassStatus { PENDING, PASSED, FAILED }
 
     // ================= Structs =================
 
     struct Course {
-        string courseCode;
-        string nameEn;
-        string nameAr;
-        CourseType courseType;
-        bool isCreated; // To check if a course exists
+        string courseCode;           // The unique code for the course, e.g., "CS101"
+        string nameEn;               // Course name in English
+        string nameAr;               // Course name in Arabic
+        CourseType courseType;       // The type of the course (ACADEMIC, PROJECT, etc.)
+        bool isCreated;              // A flag to check if a course exists
     }
 
     struct Plan {
-        uint planId;
-        string courseCode;
-        string academicYear;
-        uint theoreticalHours;
-        uint practicalHours;
-        uint totalHours;
-        uint credits;
-        uint oralWeight;
-        uint writtenWeight;
-        uint finalExamWeight;
-        bool isCreated; // To check if a plan exists
+        uint planId;                 // Unique numerical ID for the plan
+        string courseCode;           // The code of the course this plan belongs to
+        string planYear;             // The version year of this plan, e.g., "2025-2026"
+        uint8 studyYear;             // The curriculum year this course belongs to (1, 2, 3, etc.)
+        uint theoreticalHours;       // Number of theoretical hours
+        uint practicalHours;         // Number of practical hours
+        uint totalHours;             // Total hours
+        uint credits;                // Learning credits for the course
+        uint oralWeight;             // Contribution weight of the oral mark %
+        uint writtenWeight;          // Contribution weight of the written mark %
+        uint finalExamWeight;        // Contribution weight of the final exam mark %
+        bool isCreated;              // A flag to check if a plan exists
     }
 
     struct Student {
-        uint studentId;
-        string fullName;
-        uint enrollmentYear;
-        bool isCreated; // To check if a student exists
+        uint studentId;              // The student's official university ID
+        string fullName;             // Student's full name
+        uint enrollmentYear;         // The calendar year the student first enrolled in the university
+        bool isCreated;              // A flag to confirm the student exists
     }
 
     struct StudentCourseMarks {
-        uint oralMark;
-        uint writtenMark;
-        uint finalMark;
-        uint totalGrade;
-        // The 'verified' field has been removed.
-        bool isPassed;
+        uint oralMark;                // The oral mark component
+        uint writtenMark;             // The written mark component
+        uint finalMark;               // The final exam mark component
+        uint totalGrade;              // The final calculated grade for the course
+        CoursePassStatus passStatus;  // The pass/fail/pending status for this specific course
     }
 
     struct StudentYearlyResult {
-        string academicYear;
-        uint totalCreditsEarned;
-        uint totalCreditsUnEarned;
-        uint finalGPA;
-        YearlyStatus status;
+        string resultYear;            // The calendar year this result was recorded for, e.g., "2025-2026"
+        uint totalCreditsEarned;      // Total credits earned from passed courses in the study year
+        uint totalCreditsUnEarned;    // Total credits from failed courses in the study year
+        uint finalGPA;                // The final GPA for the study year 
+        YearlyStatus status;          // The final status for the year (PENDING, PASSED, FAILED)
     }
     // ================= Mappings (State Variables) =================
 
     address public owner;
 
     // Counters to generate Unique IDs
-    uint public nextStudentId = 1;
     uint public nextPlanId = 1;
 
     // Main data tables
@@ -73,8 +73,16 @@ contract UniversityRecords {
     mapping(uint => mapping(uint => StudentCourseMarks)) public studentMarks;
 
     // Mapping to link student yearly results
-    // studentId -> academicYear -> Result
+    // studentId -> resultYear -> Result
     mapping(uint => mapping(string => StudentYearlyResult)) public yearlyResults;
+
+    //  mapping to track student enrollments
+    // studentId => studyYear => array of planIds
+    mapping(uint => mapping(uint8 => uint[])) public studentEnrollments;
+
+    // Lookup mapping to find a planId by course code and year
+    // courseCode => academicYear => planId
+    mapping(string => mapping(string => uint)) public planIdLookup;
 
     // ================= Events =================
     event StudentAdded(uint indexed studentId, string fullName);
@@ -83,6 +91,7 @@ contract UniversityRecords {
     event MarksSet(uint indexed studentId, uint indexed planId, uint totalGrade);
     event YearlyResultCalculated(uint indexed studentId, string indexed academicYear, uint finalGPA, YearlyStatus status);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event StudentEnrolled(uint indexed studentId, uint indexed planId, uint8 studyYear);
 
     // ================= Modifiers =================
     modifier courseExists(string memory _courseCode) {
@@ -165,14 +174,15 @@ contract UniversityRecords {
     /**
      * @dev Adds a new study plan for a course in a specific year.
      * @param _courseCode The code of the course this plan belongs to.
-     * @param _academicYear The academic year for this plan (e.g., "2024-2025").
+     * @param _planYear The academic year for this plan (e.g., "2024-2025").
      * @param _credits The learning credits for the course in this plan.
      * @param _weights Array of weights [oral, written, finalExam].
      * @param _hours Array of hours [theoretical, practical, total].
      */
     function addPlan(
         string memory _courseCode,
-        string memory _academicYear,
+        string memory _planYear,
+        uint8 _studyYear,
         uint _credits,
         uint[3] memory _weights, // [oral, written, final]
         uint[3] memory _hours    // [theoretical, practical, total]
@@ -180,6 +190,8 @@ contract UniversityRecords {
         require(_weights[0] + _weights[1] + _weights[2] == 100 || 
                 _weights[0] + _weights[1] + _weights[2] == 0, 
                 "Weights must sum to 100 for academic courses or 0 for projects.");
+                require(planIdLookup[_courseCode][_planYear] == 0,
+                "Plan for this course and year already exists.");
 
         uint planId = nextPlanId;
         nextPlanId++;
@@ -187,7 +199,8 @@ contract UniversityRecords {
         plans[planId] = Plan({
             planId: planId,
             courseCode: _courseCode,
-            academicYear: _academicYear,
+            planYear: _planYear,
+            studyYear: _studyYear,
             theoreticalHours: _hours[0],
             practicalHours: _hours[1],
             totalHours: _hours[2],
@@ -197,8 +210,8 @@ contract UniversityRecords {
             finalExamWeight: _weights[2],
             isCreated: true
         });
-
-        emit PlanAdded(planId, _courseCode, _academicYear);
+        planIdLookup[_courseCode][_planYear] = planId;
+        emit PlanAdded(planId, _courseCode, _planYear);
     }
     /**
      * @dev Sets the marks for a student in an ACADEMIC course.
@@ -237,7 +250,7 @@ contract UniversityRecords {
             writtenMark: _writtenMark,
             finalMark: _finalMark,
             totalGrade: totalGrade,
-            isPassed: false // To be determined when calculating the yearly result.
+            passStatus: CoursePassStatus.PENDING
         });
 
         // --- Emit event ---
@@ -276,7 +289,7 @@ contract UniversityRecords {
             writtenMark: 0,
             finalMark: 0,
             totalGrade: _totalGrade,
-            isPassed: false // To be determined later
+            passStatus: CoursePassStatus.PENDING
         });
 
         // --- Emit event ---
@@ -284,84 +297,100 @@ contract UniversityRecords {
     }
        
     /**
-    * @dev Calculates the final yearly result for a student based on all their course marks for a year.
-    * This is a complex, multi-step function.
-    * @param _studentId The ID of the student.
-    * @param _academicYear The academic year to calculate for.
-    * @param _planIds An array of all plan IDs the student was enrolled in for that year.
-    */
+     * @dev Enrolls a student in a course for a specific study year.
+     */
+    function enrollStudentInPlan(
+        uint _studentId,
+        string memory _planYear,
+        string memory _courseCode,
+        uint8 _studyYear
+    ) public onlyOwner studentExists(_studentId) courseExists(_courseCode) {
+        // Find the planId using the course code and the plan year of the plan
+        uint _planId = planIdLookup[_courseCode][_planYear];
+        require(_planId != 0, "Plan for this course and academic year does not exist.");
+
+        // Add the planId to the student's enrollment list for their study year
+        studentEnrollments[_studentId][_studyYear].push(_planId);
+
+        emit StudentEnrolled(_studentId, _planId, _studyYear);
+    }
+
+    /**
+     * @dev Calculates and stores the final result for a student for a given study year.
+     * @param _studentId The ID of the student.
+     * @param _studyYear The curriculum year to calculate the result for (e.g., 1 for First Year).
+     * @param _resultYear The calendar year in which this result is being recorded (e.g., "2025-2026").
+     */
     function calculateYearlyResult(
-    uint _studentId,
-    string memory _academicYear,
-    uint[] memory _planIds
+        uint _studentId,
+        uint8 _studyYear,
+        string memory _resultYear
     ) public onlyOwner studentExists(_studentId) {
-    uint totalWeightedGradePoints = 0;
-    uint totalPossibleCredits = 0;
-
-    // --- Step 1: Calculate the provisional GPA ---
-    // We need to loop once to get the GPA, which is a dependency for passing rules.
-    for (uint i = 0; i < _planIds.length; i++) {
-        uint planId = _planIds[i];
-        require(plans[planId].isCreated, "One of the plan IDs does not exist.");
+        // The function gets the list of plan IDs from the mapping
+        uint[] memory _planIds = studentEnrollments[_studentId][_studyYear];
         
-        StudentCourseMarks storage marks = studentMarks[_studentId][planId];
-        uint credits = plans[planId].credits;
+        uint totalWeightedGradePoints = 0;
+        uint totalPossibleCredits = 0;
 
-        totalWeightedGradePoints += marks.totalGrade * credits;
-        totalPossibleCredits += credits;
-    }
+        // --- Step 1: Calculate GPA components from the list of courses ---
+        for (uint i = 0; i < _planIds.length; i++) {
+            uint planId = _planIds[i];
+            require(plans[planId].isCreated, "One of the plan IDs does not exist.");
+            
+            StudentCourseMarks storage marks = studentMarks[_studentId][planId];
+            uint credits = plans[planId].credits;
 
-    uint finalGPA = 0;
-    if (totalPossibleCredits > 0) {
-        finalGPA = (totalWeightedGradePoints * 100) / totalPossibleCredits;
-    }
+            totalWeightedGradePoints += marks.totalGrade * credits;
+            totalPossibleCredits += credits;
+        }
 
-    // --- Step 2: Determine which courses are passed based on GPA ---
-    uint totalCreditsEarned = 0;
-    uint totalCreditsUnEarned = 0;
+        // --- Step 2: Calculate final GPA ---
+        uint finalGPA = 0;
+        if (totalPossibleCredits > 0) {
+            finalGPA = (totalWeightedGradePoints * 100) / totalPossibleCredits;
+        }
 
-    for (uint i = 0; i < _planIds.length; i++) {
-        uint planId = _planIds[i];
-        StudentCourseMarks storage marks = studentMarks[_studentId][planId];
-        uint credits = plans[planId].credits;
-        bool courseIsPassed = false;
+        // --- Step 3: Loop again to set isPassed status and count credits ---
+        uint totalCreditsEarned = 0;
+        uint totalCreditsUnEarned = 0;
 
-        // Apply the complex passing rules we agreed on
-        if (finalGPA >= 6000) { // GPA is 60.00 or more
-            if (marks.totalGrade >= 50) {
-                courseIsPassed = true;
+        for (uint i = 0; i < _planIds.length; i++) {
+            uint planId = _planIds[i];
+            StudentCourseMarks storage marks = studentMarks[_studentId][planId];
+            uint credits = plans[planId].credits;
+            CoursePassStatus currentStatus = CoursePassStatus.FAILED;
+
+            if (finalGPA >= 6000) {
+                if (marks.totalGrade >= 50) { currentStatus = CoursePassStatus.PASSED; }
+            } else {
+                if (marks.totalGrade >= 60) { currentStatus = CoursePassStatus.PASSED; }
             }
-        } else { // GPA is less than 60.00
-            if (marks.totalGrade >= 60) {
-                courseIsPassed = true;
+            
+            marks.passStatus = currentStatus;
+
+            if (currentStatus == CoursePassStatus.PASSED) {
+                totalCreditsEarned += credits;
+            } else {
+                totalCreditsUnEarned += credits;
             }
         }
-        
-        marks.isPassed = courseIsPassed;
 
-        if (courseIsPassed) {
-            totalCreditsEarned += credits;
-        } else {
-            totalCreditsUnEarned += credits;
+        // --- Step 4: Determine final yearly status ---
+        YearlyStatus finalStatus = YearlyStatus.FAILED;
+        if (finalGPA >= 6000 && totalCreditsUnEarned <= 15) {
+            finalStatus = YearlyStatus.PASSED;
         }
-    }
 
-    // --- Step 3: Determine the final yearly status ---
-    YearlyStatus finalStatus = YearlyStatus.FAILED; // Default to FAILED
-    if (finalGPA >= 6000 && totalCreditsUnEarned <= 15) {
-        finalStatus = YearlyStatus.PASSED;
-    }
+        // --- Step 5: Store the final yearly result ---
+        yearlyResults[_studentId][_resultYear] = StudentYearlyResult({
+            resultYear: _resultYear,
+            totalCreditsEarned: totalCreditsEarned,
+            totalCreditsUnEarned: totalCreditsUnEarned,
+            finalGPA: finalGPA,
+            status: finalStatus
+        });
 
-    // --- Step 4: Store the final yearly result ---
-    yearlyResults[_studentId][_academicYear] = StudentYearlyResult({
-        academicYear: _academicYear,
-        totalCreditsEarned: totalCreditsEarned,
-        totalCreditsUnEarned: totalCreditsUnEarned,
-        finalGPA: finalGPA,
-        status: finalStatus
-    });
-
-    emit YearlyResultCalculated(_studentId, _academicYear, finalGPA, finalStatus);
+        emit YearlyResultCalculated(_studentId, _resultYear, finalGPA, finalStatus);
     }
     
     // ================== Getter Functions ==================
