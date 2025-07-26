@@ -51,11 +51,20 @@ contract UniversityRecords {
 
     struct StudentYearlyResult {
         string resultYear;            // The calendar year this result was recorded for, e.g., "2025-2026"
+        uint8 studyYear;              // The curriculum year this student belongs to (1, 2, 3, etc.)
         uint totalCreditsEarned;      // Total credits earned from passed courses in the study year
         uint totalCreditsUnEarned;    // Total credits from failed courses in the study year
         uint finalGPA;                // The final GPA for the study year 
         YearlyStatus status;          // The final status for the year (PENDING, PASSED, FAILED)
     }
+
+    struct GraduationRecord {
+        bool isGraduated;           // A flag to indicate if the student has graduated
+        uint graduationGPA;         // The final graduation GPA (value * 100)
+        string decisionNumber;      // The official graduation decision number
+        string decisionDate;        // The date of the graduation decision
+    }
+ 
     // ================= Mappings (State Variables) =================
 
     address public owner;
@@ -73,25 +82,24 @@ contract UniversityRecords {
     mapping(uint => mapping(uint => StudentCourseMarks)) public studentMarks;
 
     // Mapping to link student yearly results
-    // studentId -> resultYear -> Result
-    mapping(uint => mapping(string => StudentYearlyResult)) public yearlyResults;
-
-    //  mapping to track student enrollments
-    // studentId => studyYear => array of planIds
-    mapping(uint => mapping(uint8 => uint[])) public studentEnrollments;
+   // studentId -> studyYear -> StudentYearlyResult
+    mapping(uint => mapping(uint8 => StudentYearlyResult)) public yearlyResults;
 
     // Lookup mapping to find a planId by course code and year
-    // courseCode => academicYear => planId
+    // courseCode => planYear => planId
     mapping(string => mapping(string => uint)) public planIdLookup;
+
+    // Mapping to store graduation records
+    // studentId -> GraduationRecord
+    mapping(uint => GraduationRecord) public graduationRecords;
 
     // ================= Events =================
     event StudentAdded(uint indexed studentId, string fullName);
     event CourseAdded(string indexed courseCode, string nameEn);
-    event PlanAdded(uint indexed planId, string indexed courseCode, string academicYear);
+    event PlanAdded(uint indexed planId, string indexed courseCode, string planYear);
     event MarksSet(uint indexed studentId, uint indexed planId, uint totalGrade);
-    event YearlyResultCalculated(uint indexed studentId, string indexed academicYear, uint finalGPA, YearlyStatus status);
+    event YearlyResultCalculated(uint indexed studentId, string indexed resultYear, uint finalGPA, YearlyStatus status);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event StudentEnrolled(uint indexed studentId, uint indexed planId, uint8 studyYear);
 
     // ================= Modifiers =================
     modifier courseExists(string memory _courseCode) {
@@ -227,7 +235,8 @@ contract UniversityRecords {
         uint _planId,
         uint _oralMark,
         uint _writtenMark,
-        uint _finalMark
+        uint _finalMark,
+        uint _totalGrade
     ) public onlyOwner studentExists(_studentId) planExists(_planId) {
         // --- Retrieve necessary data ---
         Plan storage plan = plans[_planId];
@@ -238,23 +247,28 @@ contract UniversityRecords {
         require(_oralMark <= 100 && _writtenMark <= 100 && _finalMark <= 100, "Marks cannot exceed 100.");
 
         // --- Calculate the final grade ---
-        uint totalGrade = ((_oralMark * plan.oralWeight) + 
-                             (_writtenMark * plan.writtenWeight) + 
-                             (_finalMark * plan.finalExamWeight)) / 100;
-        
-        require(totalGrade <= 100, "Calculated grade exceeds 100.");
+        uint calculatedGrade = ((_oralMark * plan.oralWeight) + 
+                         (_writtenMark * plan.writtenWeight) + 
+                         (_finalMark * plan.finalExamWeight)) / 100;
+
+       require(calculatedGrade <= 100,
+        "Calculation result exceeds 100. Check input marks and weights.");
+
+       //  verification line
+    require(calculatedGrade == _totalGrade,
+     "Provided total grade does not match calculation.");
 
         // --- Store the marks ---
         studentMarks[_studentId][_planId] = StudentCourseMarks({
             oralMark: _oralMark,
             writtenMark: _writtenMark,
             finalMark: _finalMark,
-            totalGrade: totalGrade,
+            totalGrade: _totalGrade,
             passStatus: CoursePassStatus.PENDING
         });
 
         // --- Emit event ---
-        emit MarksSet(_studentId, _planId, totalGrade);
+        emit MarksSet(_studentId, _planId, _totalGrade);
     }
 
     /**
@@ -295,39 +309,17 @@ contract UniversityRecords {
         // --- Emit event ---
         emit MarksSet(_studentId, _planId, _totalGrade);
     }
-       
+ 
     /**
-     * @dev Enrolls a student in a course for a specific study year.
+     * @dev Calculates a yearly result and verifies it against a provided GPA.
      */
-    function enrollStudentInPlan(
+    function calculateAndVerifyGPA(
         uint _studentId,
-        string memory _planYear,
-        string memory _courseCode,
-        uint8 _studyYear
-    ) public onlyOwner studentExists(_studentId) courseExists(_courseCode) {
-        // Find the planId using the course code and the plan year of the plan
-        uint _planId = planIdLookup[_courseCode][_planYear];
-        require(_planId != 0, "Plan for this course and academic year does not exist.");
-
-        // Add the planId to the student's enrollment list for their study year
-        studentEnrollments[_studentId][_studyYear].push(_planId);
-
-        emit StudentEnrolled(_studentId, _planId, _studyYear);
-    }
-
-    /**
-     * @dev Calculates and stores the final result for a student for a given study year.
-     * @param _studentId The ID of the student.
-     * @param _studyYear The curriculum year to calculate the result for (e.g., 1 for First Year).
-     * @param _resultYear The calendar year in which this result is being recorded (e.g., "2025-2026").
-     */
-    function calculateYearlyResult(
-        uint _studentId,
+        string memory _resultYear,
         uint8 _studyYear,
-        string memory _resultYear
+        uint _providedGPA ,  // The only value we receive for verification
+        uint[] memory _planIds
     ) public onlyOwner studentExists(_studentId) {
-        // The function gets the list of plan IDs from the mapping
-        uint[] memory _planIds = studentEnrollments[_studentId][_studyYear];
         
         uint totalWeightedGradePoints = 0;
         uint totalPossibleCredits = 0;
@@ -350,7 +342,9 @@ contract UniversityRecords {
             finalGPA = (totalWeightedGradePoints * 100) / totalPossibleCredits;
         }
 
-        // --- Step 3: Loop again to set isPassed status and count credits ---
+        // --- Verification Step ---
+        require(finalGPA == _providedGPA, "Provided GPA does not match calculation.");
+
         uint totalCreditsEarned = 0;
         uint totalCreditsUnEarned = 0;
 
@@ -375,24 +369,39 @@ contract UniversityRecords {
             }
         }
 
-        // --- Step 4: Determine final yearly status ---
         YearlyStatus finalStatus = YearlyStatus.FAILED;
         if (finalGPA >= 6000 && totalCreditsUnEarned <= 15) {
             finalStatus = YearlyStatus.PASSED;
         }
 
-        // --- Step 5: Store the final yearly result ---
-        yearlyResults[_studentId][_resultYear] = StudentYearlyResult({
+        yearlyResults[_studentId][_studyYear] = StudentYearlyResult({
             resultYear: _resultYear,
+            studyYear: _studyYear,
             totalCreditsEarned: totalCreditsEarned,
             totalCreditsUnEarned: totalCreditsUnEarned,
-            finalGPA: finalGPA,
+            finalGPA: _providedGPA ,
             status: finalStatus
         });
 
-        emit YearlyResultCalculated(_studentId, _resultYear, finalGPA, finalStatus);
+        emit YearlyResultCalculated(_studentId, _resultYear, _providedGPA, finalStatus);
     }
-    
+
+    /**
+     * @dev Sets the graduation record for a student.
+     */
+    function setGraduationRecord(
+        uint _studentId,
+        uint _graduationGPA,
+        string memory _decisionNumber,
+        string memory _decisionDate
+    ) public onlyOwner studentExists(_studentId) {
+        graduationRecords[_studentId] = GraduationRecord({
+            isGraduated: true,
+            graduationGPA: _graduationGPA,
+            decisionNumber: _decisionNumber,
+            decisionDate: _decisionDate
+        });
+    }
     // ================== Getter Functions ==================
 
     /**
@@ -428,17 +437,51 @@ contract UniversityRecords {
     /**
      * @dev Gets the yearly result for a student for a specific year.
      * @param _studentId The ID of the student.
-     * @param _academicYear The academic year to look up.
+     * @param _studyYear The study year to look up.
      * @return A StudentYearlyResult struct with the result data.
      */
-    function getYearlyResult(uint _studentId, string memory _academicYear)
+    function getYearlyResult(uint _studentId, uint8 _studyYear)
         public
         view
         studentExists(_studentId)
         returns (StudentYearlyResult memory)
     {
-        return yearlyResults[_studentId][_academicYear];
+        return yearlyResults[_studentId][_studyYear];
     }
+    
+    /**
+     * @dev Gets a full comprehensive report for a student by their ID.
+     */
+    function getStudentFullReport(uint _studentId)
+        public
+        view
+        studentExists(_studentId)
+        returns (
+            Student memory studentDetails,
+            StudentYearlyResult[] memory allYearlyResults,
+            GraduationRecord memory gradRecord
+        )
+    {
+        studentDetails = students[_studentId];
+        gradRecord = graduationRecords[_studentId];
+        
+        StudentYearlyResult[] memory results = new StudentYearlyResult[](5);
+        uint resultCount = 0;
 
+        // Loop through study years 1 to 5 and fetch results directly
+        for (uint8 studyYear = 1; studyYear <= 5; studyYear++) {
+            // Check if a result exists for this study year
+            if (bytes(yearlyResults[_studentId][studyYear].resultYear).length > 0) {
+                results[resultCount] = yearlyResults[_studentId][studyYear];
+                resultCount++;
+            }
+        }
+        
+        // Copy the found results into the final array to be returned
+        allYearlyResults = new StudentYearlyResult[](resultCount);
+        for (uint i = 0; i < resultCount; i++) {
+            allYearlyResults[i] = results[i];
+        }
+    }
 
 }

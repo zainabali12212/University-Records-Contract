@@ -1,6 +1,149 @@
 // This is the Application Binary Interface (ABI) of your contract.
 export const contractABI =[
 	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "courseCode",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "nameEn",
+				"type": "string"
+			}
+		],
+		"name": "CourseAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "studentId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "planId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "totalGrade",
+				"type": "uint256"
+			}
+		],
+		"name": "MarksSet",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "planId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "courseCode",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "academicYear",
+				"type": "string"
+			}
+		],
+		"name": "PlanAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "studentId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "fullName",
+				"type": "string"
+			}
+		],
+		"name": "StudentAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "studentId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "academicYear",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "finalGPA",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum UniversityRecords.YearlyStatus",
+				"name": "status",
+				"type": "uint8"
+			}
+		],
+		"name": "YearlyResultCalculated",
+		"type": "event"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "string",
@@ -95,216 +238,12 @@ export const contractABI =[
 				"internalType": "string",
 				"name": "_academicYear",
 				"type": "string"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "_planIds",
-				"type": "uint256[]"
 			}
 		],
 		"name": "calculateYearlyResult",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_studentId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_planId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_oralMark",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_writtenMark",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_finalMark",
-				"type": "uint256"
-			}
-		],
-		"name": "setAcademicMarks",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "string",
-				"name": "courseCode",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "nameEn",
-				"type": "string"
-			}
-		],
-		"name": "CourseAdded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "studentId",
-				"type": "uint256"
-			},
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "planId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "totalGrade",
-				"type": "uint256"
-			}
-		],
-		"name": "MarksSet",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "planId",
-				"type": "uint256"
-			},
-			{
-				"indexed": true,
-				"internalType": "string",
-				"name": "courseCode",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "academicYear",
-				"type": "string"
-			}
-		],
-		"name": "PlanAdded",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_studentId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_planId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_totalGrade",
-				"type": "uint256"
-			}
-		],
-		"name": "setProjectOrResearchGrade",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "studentId",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "fullName",
-				"type": "string"
-			}
-		],
-		"name": "StudentAdded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "studentId",
-				"type": "uint256"
-			},
-			{
-				"indexed": true,
-				"internalType": "string",
-				"name": "academicYear",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "finalGPA",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "enum UniversityRecords.YearlyStatus",
-				"name": "status",
-				"type": "uint8"
-			}
-		],
-		"name": "YearlyResultCalculated",
-		"type": "event"
 	},
 	{
 		"inputs": [
@@ -343,6 +282,29 @@ export const contractABI =[
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_studentId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_academicYear",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_planId",
+				"type": "uint256"
+			}
+		],
+		"name": "enrollStudentInPlan",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -587,6 +549,91 @@ export const contractABI =[
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "_studentId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_planId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_oralMark",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_writtenMark",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_finalMark",
+				"type": "uint256"
+			}
+		],
+		"name": "setAcademicMarks",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_studentId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_planId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_totalGrade",
+				"type": "uint256"
+			}
+		],
+		"name": "setProjectOrResearchGrade",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "studentEnrollments",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
 			},
@@ -708,4 +755,4 @@ export const contractABI =[
 ];
 
 // This is the address of your deployed contract on the Ganache network.
-export const contractAddress = "0xd1dA4C5d627c00Fa3323dc3b5ebECcD76da7aAb6";
+export const contractAddress = "0x0695FFE9013AA02B79e2A26669AA326A37a1485b";
