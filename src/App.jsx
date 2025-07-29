@@ -45,7 +45,7 @@ function App() {
     }
   };
 
-  // The new comprehensive search function
+  // The comprehensive search function
   const handleFullReportSearch = async (event) => {
     event.preventDefault();
     if (!contract || !studentIdSearch) return;
@@ -82,7 +82,7 @@ function App() {
             
             <hr />
 
-            {/* Final Search Form */}
+            {/* Search Form */}
             <form onSubmit={handleFullReportSearch}>
               <h3>Search for a Student's Full Report</h3>
               <input 
@@ -110,17 +110,31 @@ function App() {
                   <p><strong>Enrollment Year:</strong> {studentReport.studentDetails.enrollmentYear}</p>
                 </div>
 
-                {/* Yearly Results */}
+                {/* Yearly Results Table */}
                 <div className="report-section">
                   <h3>Yearly Results</h3>
-                  {studentReport.allYearlyResults.map((result, index) => (
-                    <div key={index} className="yearly-result">
-                      <h4>Study Year {result.studyYear} ({result.resultYear})</h4>
-                      <p><strong>GPA:</strong> {(result.finalGPA / 100).toFixed(2)}</p>
-                      <p><strong>Status:</strong> {result.status === '1' ? 'Passed' : 'Failed'}</p>
-                      <p><strong>Credits Earned:</strong> {result.totalCreditsEarned}</p>
-                    </div>
-                  ))}
+                  <table className="results-table">
+                    <thead>
+                      <tr>
+                        <th>Study Year</th>
+                        <th>Academic Year</th>
+                        <th>GPA</th>
+                        <th>Status</th>
+                        <th>Credits Earned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentReport.allYearlyResults.map((result, index) => (
+                        <tr key={index}>
+                          <td>{result.studyYear}</td>
+                          <td>{result.resultYear}</td>
+                          <td>{(result.finalGPA / 100).toFixed(2)}</td>
+                          <td>{result.status === '1' ? 'Passed' : 'Failed'}</td>
+                          <td>{result.totalCreditsEarned}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
                 {/* Graduation Record */}

@@ -2,4 +2,4 @@
 export const contractABI =[/* ABI */];
 
 // This is the address of your deployed contract on the Ganache network.
-export const contractAddress = "DEPLOYED ADDRESS";
+export const contractAddress = "ADDRESS OF DEPLOYED CONTRACT";
