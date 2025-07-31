@@ -9,6 +9,16 @@ function App() {
   const [studentIdSearch, setStudentIdSearch] = useState('');
   const [studentReport, setStudentReport] = useState(null);
   const [searchMessage, setSearchMessage] = useState('');
+  // State for the verification form
+  const [verifyStudentId, setVerifyStudentId] = useState('');
+  const [verifyStudyYear, setVerifyStudyYear] = useState('');
+  const [verifyProvidedGPA, setVerifyProvidedGPA] = useState('');
+  const [verificationResult, setVerificationResult] = useState('');
+  // State for the new course grade verification form
+const [verifyCgStudentId, setVerifyCgStudentId] = useState('');
+const [verifyCgCourseCode, setVerifyCgCourseCode] = useState('');
+const [verifyCgProvidedGrade, setVerifyCgProvidedGrade] = useState('');
+const [cgVerificationResult, setCgVerificationResult] = useState('');
 
   // Function to initialize web3 and contract instance
   useEffect(() => {
@@ -68,6 +78,60 @@ function App() {
       setSearchMessage('An error occurred while fetching the report.');
     }
   };
+
+  // Function to handle the GPA verification
+  const handleGpaVerification = async (event) => {
+    event.preventDefault();
+    if (!contract) return;
+
+    setVerificationResult('Verifying...');
+    try {
+      // Get the stored result from the smart contract
+      const storedResult = await contract.methods.getYearlyResult(verifyStudentId, verifyStudyYear).call();
+
+      // Check if a result was found
+      if (storedResult.resultYear && storedResult.resultYear.length > 0) {
+        // Compare the stored GPA with the provided GPA
+        const storedGPA = Number(storedResult.finalGPA);
+        const providedGPA = Number(verifyProvidedGPA) * 100;
+
+        if (storedGPA === providedGPA) {
+          setVerificationResult('Result is CORRECT');
+        } else {
+          setVerificationResult(`Result is INCORRECT. The correct GPA is ${(storedGPA / 100).toFixed(2)}`);
+        }
+      } else {
+        setVerificationResult('No result found for this student and study year.');
+      }
+    } catch (error) {
+      console.error("Error during verification:", error);
+      setVerificationResult('An error occurred during verification.');
+    }
+  };
+
+  // Function to handle the course grade verification
+  const handleCourseGradeVerification = async (event) => {
+    event.preventDefault();
+    if (!contract) return;
+    setCgVerificationResult('Verifying...');
+    try {
+        // Call the getter function from the smart contract
+        const storedGrade = await contract.methods.getCertifiedGrade(verifyCgStudentId, verifyCgCourseCode).call();
+
+        if (storedGrade > 0) {
+            if (storedGrade == verifyCgProvidedGrade) {
+                setCgVerificationResult('Grade is CORRECT');
+            } else {
+                setCgVerificationResult(`Grade is INCORRECT. The correct certified grade is ${storedGrade}`);
+            }
+        } else {
+            setCgVerificationResult('No certified grade found for this course.');
+        }
+    } catch (error) {
+        console.error("Error during course grade verification:", error);
+        setCgVerificationResult('An error occurred.');
+    }
+};
 
   return (
     <div className="App">
@@ -151,7 +215,75 @@ function App() {
           </div>
         )}
       </header>
+
+      <hr />
+            
+            {/* GPA Verification Form */}
+            <form onSubmit={handleGpaVerification}>
+              <h3>Verify a Student's Yearly GPA</h3>
+              <input 
+                type="number"
+                placeholder="Enter Student ID"
+                value={verifyStudentId}
+                onChange={(e) => setVerifyStudentId(e.target.value)}
+                required
+              />
+              <input 
+                type="number"
+                placeholder="Study Year (1-5)"
+                value={verifyStudyYear}
+                onChange={(e) => setVerifyStudyYear(e.target.value)}
+                required
+              />
+              <input 
+                type="number"
+                step="0.01" // Allows decimal input
+                placeholder="GPA to Verify (e.g., 92.66)"
+                value={verifyProvidedGPA}
+                onChange={(e) => setVerifyProvidedGPA(e.target.value)}
+                required
+              />
+              <button type="submit">Verify GPA</button>
+            </form>
+
+            {/* Display the verification result */}
+            {verificationResult && <p><strong>Verification Status:</strong> {verificationResult}</p>}
+
+            <hr />
+
+            {/* Course Grade Verification Form */}
+          <form onSubmit={handleCourseGradeVerification}>
+          <h3>Verify a Student's Course Grade</h3>
+          <input 
+            type="number"
+            placeholder="Enter Student ID"
+            value={verifyCgStudentId}
+            onChange={(e) => setVerifyCgStudentId(e.target.value)}
+            required
+          />
+          <input 
+            type="text"
+            placeholder="Course Code (e.g., CS101)"
+            value={verifyCgCourseCode}
+            onChange={(e) => setVerifyCgCourseCode(e.target.value)}
+            required
+          />
+          <input 
+            type="number"
+            placeholder="Grade to Verify"
+            value={verifyCgProvidedGrade}
+            onChange={(e) => setVerifyCgProvidedGrade(e.target.value)}
+            required
+          />
+          <button type="submit">Verify Grade</button>
+          </form>
+        {/* Display the verification result */}
+          {cgVerificationResult && <p><strong>Verification Status:</strong> {cgVerificationResult}</p>}
+
+            
     </div>
+
+    
   );
 }
 

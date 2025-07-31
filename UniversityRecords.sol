@@ -93,6 +93,9 @@ contract UniversityRecords {
     // studentId -> GraduationRecord
     mapping(uint => GraduationRecord) public graduationRecords;
 
+    // studentId -> courseCode -> array of all planIds attempted
+    mapping(uint => mapping(string => uint[])) public studentCourseAttempts;
+
     // ================= Events =================
     event StudentAdded(uint indexed studentId, string fullName);
     event CourseAdded(string indexed courseCode, string nameEn);
@@ -258,14 +261,25 @@ contract UniversityRecords {
     require(calculatedGrade == _totalGrade,
      "Provided total grade does not match calculation.");
 
-        // --- Store the marks ---
+        // --- Determine initial pass status based on logic ---
+        CoursePassStatus initialStatus;
+        if (_totalGrade >= 60) {
+            initialStatus = CoursePassStatus.PASSED; // Definitely passed
+        } else if (_totalGrade >= 50) {
+            initialStatus = CoursePassStatus.PENDING; // Depends on the yearly GPA
+        } else {
+            initialStatus = CoursePassStatus.FAILED; // Definitely failed
+        }
+
+        // --- Store the marks with the calculated status ---
         studentMarks[_studentId][_planId] = StudentCourseMarks({
             oralMark: _oralMark,
             writtenMark: _writtenMark,
             finalMark: _finalMark,
             totalGrade: _totalGrade,
-            passStatus: CoursePassStatus.PENDING
+            passStatus: initialStatus 
         });
+        studentCourseAttempts[_studentId][course.courseCode].push(_planId);
 
         // --- Emit event ---
         emit MarksSet(_studentId, _planId, _totalGrade);
@@ -297,14 +311,25 @@ contract UniversityRecords {
         );
         require(_totalGrade <= 100, "Grade cannot exceed 100.");
 
+        // --- Determine initial pass status ---
+        CoursePassStatus initialStatus;
+        if (_totalGrade >= 60) {
+            initialStatus = CoursePassStatus.PASSED;
+        } else if (_totalGrade >= 50) {
+            initialStatus = CoursePassStatus.PENDING;
+        } else {
+            initialStatus = CoursePassStatus.FAILED;
+        }
+        
         // --- Store the marks ---
         studentMarks[_studentId][_planId] = StudentCourseMarks({
             oralMark: 0,
             writtenMark: 0,
             finalMark: 0,
             totalGrade: _totalGrade,
-            passStatus: CoursePassStatus.PENDING
+            passStatus: initialStatus 
         });
+        studentCourseAttempts[_studentId][course.courseCode].push(_planId);
 
         // --- Emit event ---
         emit MarksSet(_studentId, _planId, _totalGrade);
@@ -482,6 +507,28 @@ contract UniversityRecords {
         for (uint i = 0; i < resultCount; i++) {
             allYearlyResults[i] = results[i];
         }
+    }
+    
+    /**
+     * @dev Gets the certified (PASSED) grade for a student in a specific course.
+     * @param _studentId The ID of the student.
+     * @param _courseCode The code of the course to check.
+     * @return The certified total grade, or 0 if no certified grade exists.
+     */
+    function getCertifiedGrade(uint _studentId, string memory _courseCode)
+        public
+        view
+        studentExists(_studentId)
+        returns (uint)
+    {
+        uint[] memory attemptPlanIds = studentCourseAttempts[_studentId][_courseCode];
+        for (uint i = 0; i < attemptPlanIds.length; i++) {
+            uint planId = attemptPlanIds[i];
+            if (studentMarks[_studentId][planId].passStatus == CoursePassStatus.PASSED) {
+                return studentMarks[_studentId][planId].totalGrade;
+            }
+        }
+        return 0; // Return 0 if no PASSED grade is found
     }
 
 }
