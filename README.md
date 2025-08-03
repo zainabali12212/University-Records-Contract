@@ -42,9 +42,9 @@ The system is designed with a clear separation of concerns, consisting of three 
 
 ### Installation Steps
 1.  **Clone the repository:**
-    Replace `<https://github.com/zainabali12212/University-Records-Contract.git>` with the actual HTTPS URL of your repository.
+    Replace `https://github.com/zainabali12212/University-Records-Contract.git` with the actual HTTPS URL of your repository.
     ```bash
-    git clone <https://github.com/zainabali12212/University-Records-Contract.git>
+    git clone https://github.com/zainabali12212/University-Records-Contract.git
     cd University-Records-Contract
     ```
 
