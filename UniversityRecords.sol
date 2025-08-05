@@ -412,7 +412,7 @@ contract UniversityRecords {
     }
 
     /**
-     * @dev Sets the graduation record for a student.
+     * @dev Sets the graduation record for a student after verifying all study years are passed.
      */
     function setGraduationRecord(
         uint _studentId,
@@ -420,6 +420,18 @@ contract UniversityRecords {
         string memory _decisionNumber,
         string memory _decisionDate
     ) public onlyOwner studentExists(_studentId) {
+        // --- NEW: Verification Step ---
+        // Loop through all 5 study years to ensure they are completed and passed.
+        for (uint8 studyYear = 1; studyYear <= 5; studyYear++) {
+            StudentYearlyResult storage result = yearlyResults[_studentId][studyYear];
+            // Check that a result exists and its status is PASSED
+            require(
+                bytes(result.resultYear).length > 0 && result.status == YearlyStatus.PASSED,
+                "Student has not passed all 5 study years yet."
+            );
+        }
+
+        // --- Store the graduation record only after successful verification ---
         graduationRecords[_studentId] = GraduationRecord({
             isGraduated: true,
             graduationGPA: _graduationGPA,
