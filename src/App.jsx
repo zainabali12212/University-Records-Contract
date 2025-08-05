@@ -98,7 +98,7 @@ const [cgVerificationResult, setCgVerificationResult] = useState('');
         if (storedGPA === providedGPA) {
           setVerificationResult('Result is CORRECT');
         } else {
-          setVerificationResult(`Result is INCORRECT. The correct GPA is ${(storedGPA / 100).toFixed(2)}`);
+          setVerificationResult('Result is INCORRECT');
         }
       } else {
         setVerificationResult('No result found for this student and study year.');
@@ -122,7 +122,7 @@ const [cgVerificationResult, setCgVerificationResult] = useState('');
             if (storedGrade == verifyCgProvidedGrade) {
                 setCgVerificationResult('Grade is CORRECT');
             } else {
-                setCgVerificationResult(`Grade is INCORRECT. The correct certified grade is ${storedGrade}`);
+                setCgVerificationResult('Grade is INCORRECT');
             }
         } else {
             setCgVerificationResult('No certified grade found for this course.');
