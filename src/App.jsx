@@ -84,6 +84,16 @@ const [cgVerificationResult, setCgVerificationResult] = useState('');
     event.preventDefault();
     if (!contract) return;
 
+    // Create a unique key for this specific verification attempt
+    const verificationKey = `gpa_attempts_${verifyStudentId}_${verifyStudyYear}`;
+    
+    // --- NEW LOGIC: Check attempts before calling the contract ---
+    const attempts = Number(localStorage.getItem(verificationKey)) || 0;
+    if (attempts >= 3) {
+      setVerificationResult('You have exceeded the maximum number of attempts for this verification.');
+      return;
+    }
+
     setVerificationResult('Verifying...');
     try {
       // Get the stored result from the smart contract
@@ -97,8 +107,12 @@ const [cgVerificationResult, setCgVerificationResult] = useState('');
 
         if (storedGPA === providedGPA) {
           setVerificationResult('Result is CORRECT');
+          // Reset attempts on correct guess
+          localStorage.setItem(verificationKey, '0');
         } else {
           setVerificationResult('Result is INCORRECT');
+          // --- NEW LOGIC: Increment attempts on incorrect guess ---
+          localStorage.setItem(verificationKey, attempts + 1);
         }
       } else {
         setVerificationResult('No result found for this student and study year.');
@@ -113,6 +127,17 @@ const [cgVerificationResult, setCgVerificationResult] = useState('');
   const handleCourseGradeVerification = async (event) => {
     event.preventDefault();
     if (!contract) return;
+
+    // Create a unique key for this specific verification attempt
+    const verificationKey = `grade_attempts_${verifyCgStudentId}_${verifyCgCourseCode}`;
+    
+    // --- NEW LOGIC: Check attempts before calling the contract ---
+    const attempts = Number(localStorage.getItem(verificationKey)) || 0;
+    if (attempts >= 3) {
+        setCgVerificationResult('You have exceeded the maximum number of attempts for this verification.');
+        return;
+    }
+
     setCgVerificationResult('Verifying...');
     try {
         // Call the getter function from the smart contract
@@ -121,8 +146,12 @@ const [cgVerificationResult, setCgVerificationResult] = useState('');
         if (storedGrade > 0) {
             if (storedGrade == verifyCgProvidedGrade) {
                 setCgVerificationResult('Grade is CORRECT');
+                // Reset attempts on correct guess
+                localStorage.setItem(verificationKey, '0');
             } else {
                 setCgVerificationResult('Grade is INCORRECT');
+                // --- NEW LOGIC: Increment attempts on incorrect guess ---
+                localStorage.setItem(verificationKey, attempts + 1);
             }
         } else {
             setCgVerificationResult('No certified grade found for this course.');
